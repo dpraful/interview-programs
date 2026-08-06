@@ -1,19 +1,16 @@
-from fastapi import APIRouter, Body
+from fastapi import FastAPI, Body
 from database import get_connection
 import pyodbc
 import json
 
-router = APIRouter()
+app = FastAPI()
 
-@router.post("/commonpost")
+@app.post("/commonpost")
 def common_post(body: dict = Body(...)):
-
     try:
-
         json_data = json.dumps(body)
 
         with get_connection() as conn:
-
             cursor = conn.cursor()
 
             output_code = 0
@@ -38,7 +35,6 @@ def common_post(body: dict = Body(...)):
             }
 
     except pyodbc.Error as e:
-
         message = e.args[1] if len(e.args) > 1 else str(e)
 
         if "]" in message:
