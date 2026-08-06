@@ -1,28 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  FlatList,
   Text,
-  Image,
+  FlatList,
   TouchableOpacity,
+  Image,
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
 } from 'react-native';
 
-const PAGE_SIZE = 16;
+const PAGE_SIZE = 10;
 
 export default function App() {
   const [products, setProducts] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const fetchProducts = async (page) => {
-    try {
-      setLoading(true);
+  const fetchProducts = async (pageNo) => {
+    setLoading(true);
 
-      const skip = (page - 1) * PAGE_SIZE;
+    try {
+      const skip = (pageNo - 1) * PAGE_SIZE;
 
       const response = await fetch(
         `https://dummyjson.com/products?limit=${PAGE_SIZE}&skip=${skip}`
@@ -32,7 +31,7 @@ export default function App() {
 
       setProducts(json.products);
       setTotalPages(Math.ceil(json.total / PAGE_SIZE));
-      setCurrentPage(page);
+      setPage(pageNo);
     } catch (error) {
       console.log(error);
     }
@@ -44,162 +43,106 @@ export default function App() {
     fetchProducts(1);
   }, []);
 
-  const renderItem = ({ item }) => {
-    return (
-      <View style={styles.card}>
-        <Image
-          source={{ uri: item.thumbnail }}
-          style={styles.image}
-        />
-
-        <Text
-          numberOfLines={2}
-          style={styles.title}
-        >
-          {item.title}
-        </Text>
-
-        <Text style={styles.price}>
-          ${item.price}
-        </Text>
-      </View>
-    );
-  };
-
-  const renderPageButton = (page) => (
-    <TouchableOpacity
-      key={page}
-      style={[
-        styles.pageButton,
-        currentPage === page && styles.activeButton,
-      ]}
-      onPress={() => fetchProducts(page)}
-    >
-      <Text
-        style={[
-          styles.pageText,
-          currentPage === page && styles.activeText,
-        ]}
-      >
-        {page}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  if (loading && products.length === 0) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-
-      <FlatList
-        data={products}
-        numColumns={4}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={{ padding: 10 }}
+  const renderItem = ({ item }) => (
+    <View style={styles.card}>
+      <Image
+        source={{ uri: item.thumbnail }}
+        style={styles.image}
       />
 
-      {loading && (
-        <ActivityIndicator
-          style={{ marginBottom: 10 }}
-          size="small"
+      <Text numberOfLines={1} style={styles.title}>
+        {item.title}
+      </Text>
+
+      <Text style={styles.price}>${item.price}</Text>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+
+      {loading ? (
+        <ActivityIndicator size="large" />
+      ) : (
+        <FlatList
+          data={products}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderItem}
         />
       )}
 
       <View style={styles.pagination}>
 
         <TouchableOpacity
-          disabled={currentPage === 1}
-          onPress={() => fetchProducts(currentPage - 1)}
+          disabled={page === 1}
+          onPress={() => fetchProducts(page - 1)}
         >
-          <Text
-            style={[
-              styles.navButton,
-              currentPage === 1 && { color: '#aaa' },
-            ]}
-          >
-            ◀ Prev
-          </Text>
+          <Text style={styles.nav}>Prev</Text>
         </TouchableOpacity>
 
-        {Array.from(
-          { length: totalPages },
-          (_, index) => renderPageButton(index + 1)
-        )}
+        {Array.from({ length: totalPages }, (_, index) => (
+          <TouchableOpacity
+            key={index}
+            style={[
+              styles.pageButton,
+              page === index + 1 && styles.activeButton,
+            ]}
+            onPress={() => fetchProducts(index + 1)}
+          >
+            <Text
+              style={{
+                color: page === index + 1 ? '#fff' : '#000',
+              }}
+            >
+              {index + 1}
+            </Text>
+          </TouchableOpacity>
+        ))}
 
         <TouchableOpacity
-          disabled={currentPage === totalPages}
-          onPress={() => fetchProducts(currentPage + 1)}
+          disabled={page === totalPages}
+          onPress={() => fetchProducts(page + 1)}
         >
-          <Text
-            style={[
-              styles.navButton,
-              currentPage === totalPages && { color: '#aaa' },
-            ]}
-          >
-            Next ▶
-          </Text>
+          <Text style={styles.nav}>Next</Text>
         </TouchableOpacity>
 
       </View>
 
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  row: {
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    paddingTop: 40,
   },
 
   card: {
-    width: '23%',
+    flexDirection: 'row',
+    padding: 10,
+    margin: 8,
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 8,
+    borderRadius: 8,
+    elevation: 2,
     alignItems: 'center',
-    elevation: 3,
   },
 
   image: {
-    width: 80,
-    height: 80,
-    resizeMode: 'contain',
-    marginBottom: 8,
+    width: 60,
+    height: 60,
+    marginRight: 10,
+    borderRadius: 8,
   },
 
   title: {
-    textAlign: 'center',
-    fontSize: 12,
+    flex: 1,
     fontWeight: 'bold',
-    height: 35,
   },
 
   price: {
     color: 'green',
     fontWeight: 'bold',
-    marginTop: 5,
-    fontSize: 14,
   },
 
   pagination: {
@@ -207,10 +150,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderColor: '#ddd',
+    padding: 10,
   },
 
   pageButton: {
@@ -224,22 +164,12 @@ const styles = StyleSheet.create({
   },
 
   activeButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: 'blue',
   },
 
-  pageText: {
-    color: '#000',
-    fontWeight: 'bold',
-  },
-
-  activeText: {
-    color: '#fff',
-  },
-
-  navButton: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  nav: {
     marginHorizontal: 10,
-    color: '#007AFF',
+    fontWeight: 'bold',
+    color: 'blue',
   },
 });
