@@ -1,47 +1,70 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  FlatList,
-  TouchableOpacity,
-  Image,
+  TextInput,
   ActivityIndicator,
   StyleSheet,
+  FlatList,
+  Image,
+  Button,
 } from 'react-native';
 
-const PAGE_SIZE = 10;
+const ITEMS_PER_PAGE = 8;
 
 export default function App() {
-  const [products, setProducts] = useState([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  const fetchProducts = async (pageNo) => {
-    setLoading(true);
-
-    try {
-      const skip = (pageNo - 1) * PAGE_SIZE;
-
-      const response = await fetch(
-        `https://dummyjson.com/products?limit=${PAGE_SIZE}&skip=${skip}`
-      );
-
-      const json = await response.json();
-
-      setProducts(json.products);
-      setTotalPages(Math.ceil(json.total / PAGE_SIZE));
-      setPage(pageNo);
-    } catch (error) {
-      console.log(error);
-    }
-
-    setLoading(false);
-  };
+  const [searchText, setSearchText] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    fetchProducts(1);
+    getData();
   }, []);
+
+  const getData = async () => {
+    try {
+      setLoading(true);
+
+      const response = await fetch('https://dummyjson.com/products');
+      const json = await response.json();
+
+      setData(json.products);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Search
+  const filteredData = useMemo(() => {
+    if (!searchText.trim()) return data;
+
+    return data.filter(item =>
+      item.title.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [data, searchText]);
+
+
+  // Reset page on search
+  const onSearch = text => {
+    setSearchText(text);
+    setCurrentPage(1);
+  };
+
+  // Pagination
+  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+
+  const pages = Array.from(
+    { length: totalPages },
+    (_, index) => index + 1
+  );
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredData.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredData, currentPage]);
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
@@ -50,64 +73,95 @@ export default function App() {
         style={styles.image}
       />
 
-      <Text numberOfLines={1} style={styles.title}>
-        {item.title}
-      </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.title}>{item.title}</Text>
 
-      <Text style={styles.price}>${item.price}</Text>
+        <Text numberOfLines={2}>
+          {item.description}
+        </Text>
+
+        <Text style={styles.price}>
+          ${item.price}
+        </Text>
+      </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
+      <TextInput
+        placeholder="Search Product..."
+        value={searchText}
+        onChangeText={onSearch}
+        style={styles.search}
+      />
 
       {loading ? (
-        <ActivityIndicator size="large" />
-      ) : (
-        <FlatList
-          data={products}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
+        <ActivityIndicator
+          size="large"
+          color="blue"
         />
+      ) : (
+        <>
+          <FlatList
+            data={paginatedData}
+            keyExtractor={item => item.id.toString()}
+            renderItem={renderItem}
+            ListEmptyComponent={
+              <Text style={styles.empty}>
+                No Products Found
+              </Text>
+            }
+          />
+          {totalPages > 1 && (
+            <View style={styles.pagination}>
+              {/* Previous */}
+              <View style={styles.button}>
+                <Button
+                  title="Prev"
+                  onPress={() =>
+                    setCurrentPage(currentPage - 1)
+                  }
+                  disabled={currentPage === 1}
+                />
+              </View>
+
+              {/* Page Buttons */}
+              {pages.map(page => (
+                <View
+                  key={page}
+                  style={styles.button}
+                >
+                  <Button
+                    title={page.toString()}
+                    color={
+                      currentPage === page
+                        ? '#007AFF'
+                        : '#888'
+                    }
+                    onPress={() =>
+                      setCurrentPage(page)
+                    }
+                  />
+                </View>
+              ))}
+
+              {/* Next */}
+              <View style={styles.button}>
+                <Button
+                  title="Next"
+                  onPress={() =>
+                    setCurrentPage(currentPage + 1)
+                  }
+                  disabled={
+                    currentPage === totalPages
+                  }
+                />
+              </View>
+            </View>
+          )}
+        </>
       )}
-
-      <View style={styles.pagination}>
-
-        <TouchableOpacity
-          disabled={page === 1}
-          onPress={() => fetchProducts(page - 1)}
-        >
-          <Text style={styles.nav}>Prev</Text>
-        </TouchableOpacity>
-
-        {Array.from({ length: totalPages }, (_, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.pageButton,
-              page === index + 1 && styles.activeButton,
-            ]}
-            onPress={() => fetchProducts(index + 1)}
-          >
-            <Text
-              style={{
-                color: page === index + 1 ? '#fff' : '#000',
-              }}
-            >
-              {index + 1}
-            </Text>
-          </TouchableOpacity>
-        ))}
-
-        <TouchableOpacity
-          disabled={page === totalPages}
-          onPress={() => fetchProducts(page + 1)}
-        >
-          <Text style={styles.nav}>Next</Text>
-        </TouchableOpacity>
-
-      </View>
-
     </View>
   );
 }
@@ -115,34 +169,52 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 40,
+    padding: 10,
+    marginTop: 40,
+    backgroundColor: '#f2f2f2',
+  },
+
+  search: {
+    height: 45,
+    borderWidth: 1,
+    borderColor: '#999',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+    marginBottom: 10,
   },
 
   card: {
     flexDirection: 'row',
-    padding: 10,
-    margin: 8,
     backgroundColor: '#fff',
+    marginBottom: 10,
+    padding: 10,
     borderRadius: 8,
     elevation: 2,
-    alignItems: 'center',
   },
 
   image: {
-    width: 60,
-    height: 60,
-    marginRight: 10,
+    width: 80,
+    height: 80,
     borderRadius: 8,
+    marginRight: 10,
   },
 
   title: {
-    flex: 1,
+    fontSize: 16,
     fontWeight: 'bold',
   },
 
   price: {
+    marginTop: 5,
     color: 'green',
     fontWeight: 'bold',
+  },
+
+  empty: {
+    textAlign: 'center',
+    fontSize: 18,
+    marginTop: 30,
   },
 
   pagination: {
@@ -150,26 +222,19 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 10,
+    marginTop: 15,
   },
 
-  pageButton: {
-    width: 35,
-    height: 35,
-    borderRadius: 18,
-    backgroundColor: '#ddd',
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 3,
+  button: {
+    margin: 4,
+    minWidth: 60,
   },
 
-  activeButton: {
-    backgroundColor: 'blue',
-  },
-
-  nav: {
-    marginHorizontal: 10,
+  info: {
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 10,
     fontWeight: 'bold',
-    color: 'blue',
+    fontSize: 16,
   },
 });
