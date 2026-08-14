@@ -35,8 +35,15 @@ export default function APP() {
     }
   }
 
-  const pagedata = data.filter((item) =>item.title.toLowerCase().includes(search.toLowerCase())).slice((page - 1) * 10, page * 10)
-  
+  const filterdata = data.filter((item) =>
+    item.title.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const pagedata = filterdata.slice(
+    (page - 1) * 10,
+    page * 10
+  )
+
   const renderItem = ({ item }) => {
     return (
       <View style={styles.card}>
@@ -69,6 +76,7 @@ export default function APP() {
         <>
           <FlatList
             data={pagedata}
+            numColumns={4}
             renderItem={renderItem}
             keyExtractor={(item) => item.id.toString()}
           />
@@ -77,17 +85,19 @@ export default function APP() {
             Page {page}
           </Text>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+           
             <Button
-              title="Load More"
+              title="Previous Page"
+              disabled={page === 1}
+              onPress={() => setPage((prev) => prev - 1)}
+            />
+
+             <Button
+              title="Next Page"
               disabled={page * 10 >= filterdata.length}
               onPress={() => setPage((prev) => prev + 1)}
             />
 
-            <Button
-              title="Load Less"
-              disabled={page === 1}
-              onPress={() => setPage((prev) => prev - 1)}
-            />
           </View>
         </>
       )}
@@ -113,6 +123,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#ddd',
+    minWidth: 300,
+    alignItems: 'center',
+    minHeight: 200,
   },
 
   image: {
