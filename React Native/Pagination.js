@@ -1,240 +1,134 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
-  TextInput,
   ActivityIndicator,
-  StyleSheet,
-  FlatList,
-  Image,
   Button,
-} from 'react-native';
+  Image,
+  StyleSheet,
+  TextInput,
+  FlatList,
+} from 'react-native'
 
-const ITEMS_PER_PAGE = 8;
-
-export default function App() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+export default function APP() {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
-    getData();
-  }, []);
+    getdata()
+  }, [])
 
-  const getData = async () => {
+  const getdata = async () => {
+    setLoading(true)
+
     try {
-      setLoading(true);
+      const response = await fetch('https://dummyjson.com/products')
+      const json = await response.json()
 
-      const response = await fetch('https://dummyjson.com/products');
-      const json = await response.json();
-
-      setData(json.products);
+      setData(json.products)
     } catch (error) {
-      console.log(error);
+      console.error('Error fetching data:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  // Search
-  const filteredData = useMemo(() => {
-    if (!searchText.trim()) return data;
+  const filterdata = data.filter((item) =>
+    item.title.toLowerCase().includes(search.toLowerCase())
+  )
 
-    return data.filter(item =>
-      item.title.toLowerCase().includes(searchText.toLowerCase())
-    );
-  }, [data, searchText]);
+  const pagedata = filterdata.slice(
+    (page - 1) * 10,
+    page * 10
+  )
 
+  const renderItem = ({ item }) => {
+    return (
+      <View style={styles.card}>
+        <Image
+          source={{ uri: item.thumbnail }}
+          style={styles.image}
+        />
 
-  // Reset page on search
-  const onSearch = text => {
-    setSearchText(text);
-    setCurrentPage(1);
-  };
-
-  // Pagination
-  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
-
-  const pages = Array.from(
-    { length: totalPages },
-    (_, index) => index + 1
-  );
-
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredData.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredData, currentPage]);
-
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Image
-        source={{ uri: item.thumbnail }}
-        style={styles.image}
-      />
-
-      <View style={{ flex: 1 }}>
-        <Text style={styles.title}>{item.title}</Text>
-
-        <Text numberOfLines={2}>
-          {item.description}
-        </Text>
-
-        <Text style={styles.price}>
-          ${item.price}
-        </Text>
+        <Text>{item.title}</Text>
+        <Text>${item.price.toFixed(2)}</Text>
       </View>
-    </View>
-  );
+    )
+  }
 
   return (
     <View style={styles.container}>
       <TextInput
-        placeholder="Search Product..."
-        value={searchText}
-        onChangeText={onSearch}
-        style={styles.search}
+        value={search}
+        onChangeText={(text) => {
+          setSearch(text)
+          setPage(1)
+        }}
+        placeholder="Search..."
+        style={styles.input}
       />
 
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="blue"
-        />
+        <ActivityIndicator />
       ) : (
         <>
           <FlatList
-            data={paginatedData}
-            keyExtractor={item => item.id.toString()}
+            data={pagedata}
             renderItem={renderItem}
-            ListEmptyComponent={
-              <Text style={styles.empty}>
-                No Products Found
-              </Text>
-            }
+            keyExtractor={(item) => item.id.toString()}
           />
-          {totalPages > 1 && (
-            <View style={styles.pagination}>
-              {/* Previous */}
-              <View style={styles.button}>
-                <Button
-                  title="Prev"
-                  onPress={() =>
-                    setCurrentPage(currentPage - 1)
-                  }
-                  disabled={currentPage === 1}
-                />
-              </View>
 
-              {/* Page Buttons */}
-              {pages.map(page => (
-                <View
-                  key={page}
-                  style={styles.button}
-                >
-                  <Button
-                    title={page.toString()}
-                    color={
-                      currentPage === page
-                        ? '#007AFF'
-                        : '#888'
-                    }
-                    onPress={() =>
-                      setCurrentPage(page)
-                    }
-                  />
-                </View>
-              ))}
+          <Text style={styles.page}>
+            Page {page}
+          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Button
+              title="Load More"
+              disabled={page * 10 >= filterdata.length}
+              onPress={() => setPage((prev) => prev + 1)}
+            />
 
-              {/* Next */}
-              <View style={styles.button}>
-                <Button
-                  title="Next"
-                  onPress={() =>
-                    setCurrentPage(currentPage + 1)
-                  }
-                  disabled={
-                    currentPage === totalPages
-                  }
-                />
-              </View>
-            </View>
-          )}
+            <Button
+              title="Load Less"
+              disabled={page === 1}
+              onPress={() => setPage((prev) => prev - 1)}
+            />
+          </View>
         </>
       )}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
-    marginTop: 40,
-    backgroundColor: '#f2f2f2',
   },
 
-  search: {
-    height: 45,
+  input: {
     borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    paddingHorizontal: 10,
+    borderColor: '#ccc',
+    padding: 10,
     marginBottom: 10,
   },
 
   card: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    marginBottom: 10,
     padding: 10,
-    borderRadius: 8,
-    elevation: 2,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
 
   image: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 10,
+    width: 100,
+    height: 100,
   },
 
-  title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  price: {
-    marginTop: 5,
-    color: 'green',
-    fontWeight: 'bold',
-  },
-
-  empty: {
+  page: {
     textAlign: 'center',
-    fontSize: 18,
-    marginTop: 30,
+    margin: 10,
   },
-
-  pagination: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 15,
-  },
-
-  button: {
-    margin: 4,
-    minWidth: 60,
-  },
-
-  info: {
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 10,
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});
+})
