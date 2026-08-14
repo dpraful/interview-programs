@@ -35,14 +35,7 @@ export default function APP() {
     }
   }
 
-  const filterdata = data.filter((item) =>
-    item.title.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const pagedata = filterdata.slice(
-    (page - 1) * 10,
-    page * 10
-  )
+  const filterdata = data.filter((item) =>item.title.toLowerCase().includes(search.toLowerCase())).slice((page - 1) * 10,page * 10)
 
   const renderItem = ({ item }) => {
     return (
@@ -75,7 +68,7 @@ export default function APP() {
       ) : (
         <>
           <FlatList
-            data={pagedata}
+            data={filterdata}
             numColumns={4}
             renderItem={renderItem}
             keyExtractor={(item) => item.id.toString()}
