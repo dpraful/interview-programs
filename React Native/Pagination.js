@@ -35,7 +35,9 @@ export default function APP() {
     }
   }
 
-  const filterdata = data.filter((item) =>item.title.toLowerCase().includes(search.toLowerCase())).slice((page - 1) * 10,page * 10)
+  const filterdata = data.filter((item) =>item.title.toLowerCase().includes(search.toLowerCase()))
+
+  const pagedata = filterdata.slice((page - 1) * 10,page * 10)
 
   const renderItem = ({ item }) => {
     return (
@@ -68,8 +70,7 @@ export default function APP() {
       ) : (
         <>
           <FlatList
-            data={filterdata}
-            numColumns={4}
+            data={pagedata}
             renderItem={renderItem}
             keyExtractor={(item) => item.id.toString()}
           />
@@ -77,21 +78,18 @@ export default function APP() {
           <Text style={styles.page}>
             Page {page}
           </Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-           
-            <Button
-              title="Previous Page"
-              disabled={page === 1}
-              onPress={() => setPage((prev) => prev - 1)}
-            />
 
-             <Button
-              title="Next Page"
-              disabled={page * 10 >= filterdata.length}
-              onPress={() => setPage((prev) => prev + 1)}
-            />
+          <Button
+            title="PREV"
+            disabled={page * 10 >= filterdata.length}
+            onPress={() => setPage((prev) => prev + 1)}
+          />
 
-          </View>
+          <Button
+            title="NEXT"
+            disabled={page === 1}
+            onPress={() => setPage((prev) => prev - 1)}
+          />
         </>
       )}
     </View>
@@ -116,9 +114,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#ddd',
-    minWidth: 300,
-    alignItems: 'center',
-    minHeight: 200,
   },
 
   image: {
