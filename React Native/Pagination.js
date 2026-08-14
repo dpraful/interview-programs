@@ -35,9 +35,9 @@ export default function APP() {
     }
   }
 
-  const filterdata = data.filter((item) =>item.title.toLowerCase().includes(search.toLowerCase()))
+  const filterdata = data.filter((item) => item.title.toLowerCase().includes(search.toLowerCase()))
 
-  const pagedata = filterdata.slice((page - 1) * 10,page * 10)
+  const pagedata = filterdata.slice((page - 1) * 10, page * 10)
 
   const renderItem = ({ item }) => {
     return (
@@ -70,6 +70,7 @@ export default function APP() {
       ) : (
         <>
           <FlatList
+            numColumns={4}
             data={pagedata}
             renderItem={renderItem}
             keyExtractor={(item) => item.id.toString()}
@@ -78,18 +79,19 @@ export default function APP() {
           <Text style={styles.page}>
             Page {page}
           </Text>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="PREV"
+              disabled={page === 1}
+              onPress={() => setPage((prev) => prev - 1)}
+            />
 
-          <Button
-            title="PREV"
-            disabled={page * 10 >= filterdata.length}
-            onPress={() => setPage((prev) => prev + 1)}
-          />
-
-          <Button
-            title="NEXT"
-            disabled={page === 1}
-            onPress={() => setPage((prev) => prev - 1)}
-          />
+            <Button
+              title="NEXT"
+              disabled={page * 10 >= filterdata.length}
+              onPress={() => setPage((prev) => prev + 1)}
+            />
+          </View>
         </>
       )}
     </View>
@@ -114,6 +116,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#ddd',
+    minHeight: 200,
+    minWidth: 300,
+    alignItems: 'center',
   },
 
   image: {
@@ -125,4 +130,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     margin: 10,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  }
 })
