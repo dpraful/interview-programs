@@ -1,0 +1,49 @@
+USE [testdb]
+GO
+/****** Object:  StoredProcedure [dbo].[rnpiuser]    Script Date: 25-08-26 11:35:39 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[rnpiuser]
+    @userid INT = NULL
+AS
+BEGIN
+
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+    SELECT CAST(
+        (
+            SELECT
+                (
+                    SELECT
+                        userid,
+                        username,
+                        email,
+                        fullname,
+                        dob,
+                        gender,
+                        phonenumber,
+                        profilepicture,
+                        bio,
+                        location,
+                        website,
+                        isverified,
+                        status,
+                        createdat,
+                        updatedat,
+                        1 AS rowstatus,
+                        2 AS flag
+                    FROM piusers WITH (NOLOCK)
+                    WHERE @userid IS NULL
+                       OR userid = @userid
+                    FOR JSON PATH
+                ) AS data
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        )
+        AS NVARCHAR(MAX)
+    ) AS data;
+
+END

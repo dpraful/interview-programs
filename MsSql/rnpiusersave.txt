@@ -1,0 +1,131 @@
+USE [testdb]
+GO
+/****** Object:  StoredProcedure [dbo].[rnpiusersave]    Script Date: 25-08-26 11:37:01 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[rnpiusersave]
+(
+    @mjsondata NVARCHAR(MAX),
+    @moutputcode INT OUTPUT
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE
+        @flag INT,
+        @userid INT,
+        @username NVARCHAR(50),
+        @email NVARCHAR(100),
+        @passwordhash NVARCHAR(255),
+        @fullname NVARCHAR(100),
+        @dob DATE,
+        @gender NVARCHAR(20),
+        @phonenumber NVARCHAR(20),
+        @profilepicture NVARCHAR(255),
+        @bio NVARCHAR(500),
+        @location NVARCHAR(100),
+        @website NVARCHAR(255),
+        @isverified BIT,
+        @status NVARCHAR(20);
+
+    -- Read JSON values
+    SELECT
+        @flag          = JSON_VALUE(@mjsondata,'$.groups.flag'),
+        @userid        = JSON_VALUE(@mjsondata,'$.groups.userid'),
+        @username      = JSON_VALUE(@mjsondata,'$.groups.username'),
+        @email         = JSON_VALUE(@mjsondata,'$.groups.email'),
+        @passwordhash  = JSON_VALUE(@mjsondata,'$.groups.passwordhash'),
+        @fullname      = JSON_VALUE(@mjsondata,'$.groups.fullname'),
+        @dob           = JSON_VALUE(@mjsondata,'$.groups.dob'),
+        @gender        = JSON_VALUE(@mjsondata,'$.groups.gender'),
+        @phonenumber   = JSON_VALUE(@mjsondata,'$.groups.phonenumber'),
+        @profilepicture= JSON_VALUE(@mjsondata,'$.groups.profilepicture'),
+        @bio           = JSON_VALUE(@mjsondata,'$.groups.bio'),
+        @location      = JSON_VALUE(@mjsondata,'$.groups.location'),
+        @website       = JSON_VALUE(@mjsondata,'$.groups.website'),
+        @isverified    = JSON_VALUE(@mjsondata,'$.groups.isverified'),
+        @status        = JSON_VALUE(@mjsondata,'$.groups.status');
+
+    -- =========================
+    -- INSERT
+    -- =========================
+    IF @flag = 1
+    BEGIN
+        INSERT INTO piusers
+        (
+            username, email, passwordhash, fullname, dob, gender,
+            phonenumber, profilepicture, bio, location, website,
+            isverified, status, createdat, updatedat
+        )
+        VALUES
+        (
+            @username, @email, @passwordhash, @fullname, @dob, @gender,
+            @phonenumber, @profilepicture, @bio, @location, @website,
+            @isverified, ISNULL(@status,'active'), GETDATE(), GETDATE()
+        );
+
+        SET @moutputcode = 1;
+
+        SELECT
+        (
+            SELECT
+                1 AS success,
+                'user saved successfully' AS message
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        ) AS data;
+    END
+
+    -- =========================
+    -- UPDATE
+    -- =========================
+    ELSE IF @flag = 2
+    BEGIN
+        UPDATE piusers
+        SET
+            username      = @username,
+            email         = @email,
+            passwordhash  = @passwordhash,
+            fullname      = @fullname,
+            dob           = @dob,
+            gender        = @gender,
+            phonenumber   = @phonenumber,
+            profilepicture= @profilepicture,
+            bio           = @bio,
+            location      = @location,
+            website       = @website,
+            isverified    = @isverified,
+            status        = @status,
+            updatedat     = GETDATE()
+        WHERE userid = @userid;
+
+        SET @moutputcode = 1;
+
+        SELECT
+        (
+            SELECT
+                1 AS success,
+                'user updated successfully' AS message
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        ) AS data;
+    END
+
+    -- =========================
+    -- INVALID FLAG
+    -- =========================
+    ELSE
+    BEGIN
+        SET @moutputcode = -1;
+
+        SELECT
+        (
+            SELECT
+                0 AS success,
+                'invalid flag value' AS message
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        ) AS data;
+    END
+END
